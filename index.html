@@ -1,0 +1,1070 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, AlertTriangle, Play, RefreshCw, Trophy, Skull, Terminal, Layers } from 'lucide-react';
+
+const questions = [
+  { 
+    type: 'Identification', 
+    q: "What tag serves as the absolute root element of any standard HTML document?", 
+    options: ["<html>", "<head>", "<body>", "<p>"], 
+    a: "<html>" 
+  },
+  { 
+    type: 'Identification', 
+    q: "Which tag encloses all the visible, renderable content on a website?", 
+    options: ["<body>", "<html>", "<head>", "<nav>"], 
+    a: "<body>" 
+  },
+  { 
+    type: 'Identification', 
+    q: "What tag is placed inside the <head> to specify the text shown in the browser tab?", 
+    options: ["<title>", "<head>", "<h1>", "<nav>"], 
+    a: "<title>" 
+  },
+  { 
+    type: 'Scenario', 
+    q: "You want to create an active hyperlink to route your user to external documentation. What tag do you use?", 
+    options: ["<a>", "<link>", "<href>", "<nav>"], 
+    a: "<a>" 
+  },
+  { 
+    type: 'Identification', 
+    q: "What attribute determines the URL target destination inside an anchor tag (<a>)?", 
+    options: ["href", "src", "link", "style"], 
+    a: "href" 
+  },
+  { 
+    type: 'Scenario', 
+    q: "You need to render a cybersecurity logo illustration on your website. Which tag is appropriate?", 
+    options: ["<img>", "<pic>", "<src>", "<image>"], 
+    a: "<img>" 
+  },
+  { 
+    type: 'Identification', 
+    q: "Which attribute inside an <img> tag points directly to the image file's source URL?", 
+    options: ["src", "href", "file", "style"], 
+    a: "src" 
+  },
+  { 
+    type: 'Scenario', 
+    q: "You are designing the top menu layout of your website. Which container is designated for navigation links?", 
+    options: ["<nav>", "<a>", "<header>", "<body>"], 
+    a: "<nav>" 
+  },
+  { 
+    type: 'Identification', 
+    q: "Which attribute applies inline CSS stylistic properties directly to an individual HTML element?", 
+    options: ["style", "css", "class", "design"], 
+    a: "style" 
+  },
+  { 
+    type: 'Scenario', 
+    q: "You want to force a line break within a block of code description without starting a new paragraph. What tag do you use?", 
+    options: ["<br>", "<hr>", "<break>", "<p>"], 
+    a: "<br>" 
+  }
+];
+
+const redemptionQuestions = [
+  { 
+    q: "Which tag creates a thematic break, usually displayed as a horizontal line?", 
+    options: ["<hr>", "<br>", "<line>", "<break>"], 
+    a: "<hr>" 
+  },
+  { 
+    q: "If you want to render the simplest possible sub-heading tier, which tag is correct?", 
+    options: ["<h6>", "<h1>", "<h3>", "<p>"], 
+    a: "<h6>" 
+  },
+  { 
+    q: "Which element holds website metadata, stylesheets, and document title definitions?", 
+    options: ["<head>", "<body>", "<html>", "<title>"], 
+    a: "<head>" 
+  },
+  { 
+    q: "Which tag is used to wrap a standard block of text representing a paragraph?", 
+    options: ["<p>", "<text>", "<label>", "<span>"], 
+    a: "<p>" 
+  }
+];
+
+const HACKER_VARIATIONS = [
+  { name: "DDoS", color: "#ef4444", text: "0101" },
+  { name: "Trojan", color: "#a855f7", text: "TRJN" },
+  { name: "Phish", color: "#f97316", text: "WORM" },
+  { name: "Spy", color: "#06b6d4", text: "SPY4" },
+  { name: "Ransom", color: "#ec4899", text: "LOCK" }
+];
+
+const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
+
+const Peashooter = () => (
+  <svg viewBox="0 0 100 100" className="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 drop-shadow-[0_0_15px_rgba(34,197,94,0.8)]" style={{ animation: 'bounce 1.6s infinite ease-in-out' }}>
+    <defs>
+      <radialGradient id="peaHead" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stopColor="#4ade80" />
+        <stop offset="70%" stopColor="#22c55e" />
+        <stop offset="100%" stopColor="#15803d" />
+      </radialGradient>
+      <linearGradient id="leafGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#4ade80" />
+        <stop offset="100%" stopColor="#166534" />
+      </linearGradient>
+    </defs>
+    <ellipse cx="50" cy="85" rx="25" ry="6" fill="rgba(0,0,0,0.4)" filter="blur(2px)" />
+    <path d="M 50 80 Q 40 60 48 45 L 52 45 Q 60 60 52 80 Z" fill="url(#leafGrad)" />
+    <path d="M 50 80 C 15 80 5 60 15 75 C 20 85 40 85 50 80" fill="url(#leafGrad)" />
+    <path d="M 50 80 C 85 80 95 60 85 75 C 80 85 60 85 50 80" fill="url(#leafGrad)" />
+    <circle cx="45" cy="35" r="20" fill="url(#peaHead)" />
+    <path d="M 50 25 L 85 28 L 85 45 L 50 48 Z" fill="url(#peaHead)" />
+    <ellipse cx="85" cy="36" rx="6" ry="10" fill="#14532d" />
+    <circle cx="42" cy="28" r="4" fill="#000" />
+    <circle cx="44" cy="26" r="1.5" fill="#fff" />
+  </svg>
+);
+
+const Cyberhacker = ({ variationIdx }) => {
+  const currentVar = HACKER_VARIATIONS[variationIdx] || HACKER_VARIATIONS[0];
+  return (
+    <svg viewBox="0 0 100 100" className="w-10 h-10 sm:w-13 sm:h-13 md:w-16 md:h-16" style={{ filter: `drop-shadow(0 0 15px ${currentVar.color})` }}>
+      <defs>
+        <linearGradient id={`hackerSuit-${variationIdx}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#1e293b" />
+          <stop offset="100%" stopColor="#020617" />
+        </linearGradient>
+        <filter id={`neonColor-${variationIdx}`}>
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <ellipse cx="50" cy="88" rx="20" ry="4" fill="rgba(0,0,0,0.5)" filter="blur(1px)" />
+      <path d="M 25 85 L 40 35 C 40 18 60 18 60 35 L 75 85 Z" fill={`url(#hackerSuit-${variationIdx})`} stroke={currentVar.color} strokeWidth="1.5" />
+      <rect x="40" y="28" width="20" height="8" rx="2" fill={currentVar.color} filter={`url(#neonColor-${variationIdx})`} className="animate-pulse" />
+      <text x="32" y="60" fill={currentVar.color} fontSize="8" fontFamily="monospace" opacity="0.7">1</text>
+      <text x="64" y="60" fill={currentVar.color} fontSize="8" fontFamily="monospace" opacity="0.7">0</text>
+      <text x="50" y="75" fill={currentVar.color} fontSize="9" fontFamily="monospace" fontWeight="bold" opacity="0.95" textAnchor="middle">{currentVar.name}</text>
+    </svg>
+  );
+};
+
+const DigitalExplosion = () => (
+  <svg viewBox="0 0 100 100" className="w-12 h-12 sm:w-16 sm:h-16 absolute z-40" style={{ transform: 'translate(-50%, -50%)' }}>
+    <defs>
+      <filter id="burstGlow">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <circle cx="50" cy="50" r="10" fill="none" stroke="#ef4444" strokeWidth="3" filter="url(#burstGlow)" className="animate-ping" style={{ animationDuration: '0.6s' }} />
+    <rect x="45" y="10" width="10" height="15" fill="#ef4444" opacity="0.8" className="animate-bounce" />
+    <rect x="45" y="75" width="10" height="15" fill="#ef4444" opacity="0.8" className="animate-bounce" />
+    <rect x="10" y="45" width="15" height="10" fill="#ef4444" opacity="0.8" className="animate-bounce" />
+    <rect x="75" y="45" width="15" height="10" fill="#ef4444" opacity="0.8" className="animate-bounce" />
+  </svg>
+);
+
+const WebsiteCore = () => (
+  <svg viewBox="0 0 100 200" className="w-8 sm:w-11 md:w-14 h-full drop-shadow-[0_0_25px_rgba(14,165,233,0.9)] z-10">
+    <defs>
+      <linearGradient id="webGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#0284c7" />
+        <stop offset="50%" stopColor="#38bdf8" />
+        <stop offset="100%" stopColor="#0369a1" />
+      </linearGradient>
+    </defs>
+    <rect x="5" y="10" width="90" height="180" rx="10" fill="#0b1329" stroke="#0ea5e9" strokeWidth="3" />
+    <rect x="5" y="10" width="90" height="25" rx="5" fill="#1e293b" />
+    <circle cx="20" cy="22" r="3.5" fill="#f87171" />
+    <circle cx="32" cy="22" r="3.5" fill="#fbbf24" />
+    <circle cx="44" cy="22" r="3.5" fill="#34d399" />
+    <rect x="15" y="48" width="70" height="35" rx="4" fill="url(#webGrad)" opacity="0.85" />
+    <rect x="15" y="95" width="70" height="10" rx="2" fill="#334155" />
+    <rect x="15" y="112" width="50" height="10" rx="2" fill="#334155" />
+    <rect x="15" y="129" width="60" height="10" rx="2" fill="#334155" />
+    <circle cx="30" cy="165" r="4" fill="#0ea5e9" className="animate-pulse" />
+    <circle cx="50" cy="165" r="4" fill="#10b981" className="animate-pulse" style={{ animationDelay: '0.2s' }} />
+    <circle cx="70" cy="165" r="4" fill="#6366f1" className="animate-pulse" style={{ animationDelay: '0.4s' }} />
+    <text x="50" y="70" fill="#ffffff" fontSize="12" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">HTML5</text>
+  </svg>
+);
+
+const LawnMower = ({ status }) => (
+  <svg viewBox="0 0 100 100" className={`w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 transition-all ${status === 'active' ? 'drop-shadow-[0_0_20px_#ef4444]' : 'drop-shadow-[0_0_15px_#10b981]'}`}>
+    <defs>
+      <linearGradient id="mowerBody" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#1e293b" />
+        <stop offset="100%" stopColor="#0f172a" />
+      </linearGradient>
+      <radialGradient id="laserBlade" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="#10b981" />
+        <stop offset="80%" stopColor="#047857" />
+        <stop offset="100%" stopColor="#022c22" />
+      </radialGradient>
+      <radialGradient id="activeLaser" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="#ef4444" />
+        <stop offset="80%" stopColor="#b91c1c" />
+        <stop offset="100%" stopColor="#450a0a" />
+      </radialGradient>
+    </defs>
+    <ellipse cx="50" cy="85" rx="25" ry="6" fill="rgba(0,0,0,0.5)" filter="blur(2px)" />
+    <rect x="20" y="25" width="60" height="50" rx="10" fill="url(#mowerBody)" stroke={status === 'active' ? '#ef4444' : '#10b981'} strokeWidth="3" />
+    <circle cx="50" cy="50" r="18" fill={status === 'active' ? 'url(#activeLaser)' : 'url(#laserBlade)'} className={status === 'active' ? 'animate-spin' : ''} style={{ transformOrigin: '50% 50%', animationDuration: '0.3s' }} />
+    <polygon points="50,15 35,45 65,45" fill={status === 'active' ? '#fca5a5' : '#a7f3d0'} />
+    <circle cx="50" cy="50" r="4" fill="#ffffff" />
+  </svg>
+);
+
+export default function App() {
+  const [gameState, setGameState] = useState('start'); // start, countdown, playing, redemption, won, lost
+  const [countdownText, setCountdownText] = useState('');
+  const [questionsList, setQuestionsList] = useState([]);
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [feedback, setFeedback] = useState(null); // 'correct', 'incorrect', 'redemption_success', 'redemption_fail'
+  const [redemptionQ, setRedemptionQ] = useState(null);
+
+  const [placementPending, setPlacementPending] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [showAnswersDatabase, setShowAnswersDatabase] = useState(false);
+
+  // Peashooter matrix (5 lanes, 4 columns)
+  const [peashooters, setPeashooters] = useState([
+    [false, false, false, false],
+    [false, false, false, false],
+    [false, false, false, false],
+    [false, false, false, false],
+    [false, false, false, false]
+  ]);
+
+  // Cyberhackers progress x pos in each of the 5 lanes (ranging from 5.5 down to 0)
+  const [hackerPositions, setHackerPositions] = useState([5.0, 5.3, 5.1, 5.5, 5.2]);
+  
+  // Cyberhackers health (each gets 3 hits maximum, resets to 3 when eliminated)
+  const [hackerHealth, setHackerHealth] = useState([3, 3, 3, 3, 3]);
+
+  // Track hacker type indices (0 to 4)
+  const [hackerTypes, setHackerTypes] = useState([0, 1, 2, 3, 4]);
+
+  const [hackerActive, setHackerActive] = useState([true, true, true, true, true]);
+
+  const [bullets, setBullets] = useState([]);
+  const [explosions, setExplosions] = useState([]);
+
+  const [isNearlyApproached, setIsNearlyApproached] = useState(false);
+
+  // Lawn mower states ('ready', 'active', 'spent') and their dynamic positions
+  const [mowerStatus, setMowerStatus] = useState(['ready', 'ready', 'ready', 'ready', 'ready']);
+  const [mowerX, setMowerX] = useState([0.7, 0.7, 0.7, 0.7, 0.7]);
+
+  const stateRef = useRef({ peashooters, hackerPositions, hackerActive, bullets, gameState, feedback, hackerHealth, mowerStatus, hackerTypes });
+  useEffect(() => {
+    stateRef.current = { peashooters, hackerPositions, hackerActive, bullets, gameState, feedback, hackerHealth, mowerStatus, hackerTypes };
+  }, [peashooters, hackerPositions, hackerActive, bullets, gameState, feedback, hackerHealth, mowerStatus, hackerTypes]);
+
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const gameLoop = setInterval(() => {
+      // 1. Continuous calibrated walking updates (exactly 0.0050 pacing)
+      setHackerPositions(prev => {
+        const next = prev.map((pos, lane) => {
+          if (!stateRef.current.hackerActive[lane]) return pos;
+
+          // Less stepping delay to support a consistent steady advance
+          const skipsStep = Math.random() > 0.85;
+          if (skipsStep && pos < 5.0) return pos;
+
+          // Configured speed to exactly 0.0050 per tick
+          let updatedPos = pos - 0.0050; 
+
+          // Lawnmower Triggering System (Triggers if Hacker reaches X <= 1.1)
+          if (stateRef.current.mowerStatus[lane] === 'ready' && updatedPos <= 1.1) {
+            setMowerStatus(prevM => {
+              const nextM = [...prevM];
+              nextM[lane] = 'active';
+              return nextM;
+            });
+          }
+
+          // Consume peashooter if reaching its sector node
+          for (let colIdx = 0; colIdx < 4; colIdx++) {
+            const peashooterPos = colIdx + 1;
+            if (peashooters[lane][colIdx] && updatedPos <= peashooterPos + 0.3) {
+              setPeashooters(p => {
+                const updatedPeashooters = p.map((row, rIdx) => {
+                  if (rIdx === lane) {
+                    const nextRow = [...row];
+                    nextRow[colIdx] = false;
+                    return nextRow;
+                  }
+                  return row;
+                });
+                return updatedPeashooters;
+              });
+            }
+          }
+
+          return Math.max(0, updatedPos);
+        });
+
+        // Warn user if closest hacker is past Column 2.2
+        const closestThreat = Math.min(...next);
+        setIsNearlyApproached(closestThreat > 0 && closestThreat <= 2.2);
+
+        // Emergency backup trigger: Only if the sweeper bot in that lane is spent or bypassed
+        const breachedIndex = next.findIndex((pos, l) => pos <= 1.0 && stateRef.current.mowerStatus[l] === 'spent' && stateRef.current.hackerActive[l]);
+        if (breachedIndex !== -1 && stateRef.current.gameState === 'playing' && !stateRef.current.feedback) {
+          triggerRedemption();
+        }
+
+        // Defeat condition: Cyberhacker has successfully reached core and mower is depleted
+        const totalBreach = next.findIndex((pos, l) => pos <= 0.05 && stateRef.current.mowerStatus[l] === 'spent' && stateRef.current.hackerActive[l]);
+        if (totalBreach !== -1) {
+          setGameState('lost');
+        }
+
+        return next;
+      });
+
+      // 2. Continuous Mower Sweep Animation & Deflection Logic
+      setMowerX(prevX => {
+        return prevX.map((x, lane) => {
+          if (stateRef.current.mowerStatus[lane] === 'active') {
+            const nextX = x + 0.15; // Sweep speed
+
+            // Vaporize hacker when mower collides
+            setHackerPositions(prevH => {
+              const nextH = [...prevH];
+              if (nextH[lane] <= nextX && stateRef.current.hackerActive[lane]) {
+                // Instantly eliminate and set delay respawn
+                triggerHackerElimination(lane, nextH[lane]);
+              }
+              return nextH;
+            });
+
+            // Deactivate and flag spent once out of bounds
+            if (nextX >= 5.8) {
+              setMowerStatus(prevM => {
+                const nextM = [...prevM];
+                nextM[lane] = 'spent';
+                return nextM;
+              });
+              return 0.7; // reset position representation
+            }
+            return nextX;
+          }
+          return x;
+        });
+      });
+
+      // 3. Bullets flight iteration and target impact
+      setBullets(prevBullets => {
+        if (prevBullets.length === 0) return prevBullets;
+        const currentHackers = stateRef.current.hackerPositions;
+        const activeBullets = [];
+
+        prevBullets.forEach(b => {
+          const nextX = b.currentX + 0.05; // Slower travel pace
+          const hackerX = currentHackers[b.lane];
+          const isHackerTargetActive = stateRef.current.hackerActive[b.lane];
+
+          // Make sure bullet only collides with active hackers
+          if (isHackerTargetActive && nextX >= hackerX) {
+            // Collision detected! Apply hit to state
+            setHackerHealth(prevHealth => {
+              const updatedHealth = [...prevHealth];
+              const remaining = updatedHealth[b.lane] - 1;
+
+              if (remaining <= 0) {
+                // ELIMINATION: Hacker destroyed! Turn active off, spawn explosion, trigger respawn delay
+                triggerHackerElimination(b.lane, hackerX);
+                updatedHealth[b.lane] = 0;
+              } else {
+                // Damaged: ONLY lessen the HP of the cyberhacker, DO NOT push them back!
+                updatedHealth[b.lane] = remaining;
+              }
+              return updatedHealth;
+            });
+          } else if (nextX < 5.5) {
+            activeBullets.push({ ...b, currentX: nextX });
+          }
+        });
+        return activeBullets;
+      });
+
+    }, 50);
+
+    return () => clearInterval(gameLoop);
+  }, [gameState, peashooters]);
+
+  // Handles elimination of cyberhacker, sets up explosion and delay before introducing a different one
+  const triggerHackerElimination = (lane, deathX) => {
+    // 1. Render Explosion Burst
+    const expId = Math.random();
+    setExplosions(prev => [...prev, { id: expId, lane, x: deathX }]);
+    setTimeout(() => {
+      setExplosions(prev => prev.filter(e => e.id !== expId));
+    }, 800);
+
+    // 2. Instantly eliminate / remove them from the grid
+    setHackerActive(prev => {
+      const next = [...prev];
+      next[lane] = false;
+      return next;
+    });
+
+    // 3. Brief 1.5s delay, then spawn a different, randomized hacker variant at spawn boundary
+    setTimeout(() => {
+      setHackerPositions(prev => {
+        const next = [...prev];
+        next[lane] = 5.0 + Math.random() * 0.5;
+        return next;
+      });
+      setHackerTypes(prev => {
+        const next = [...prev];
+        next[lane] = Math.floor(Math.random() * HACKER_VARIATIONS.length); // Pick different/random variation index
+        return next;
+      });
+      setHackerHealth(prev => {
+        const next = [...prev];
+        next[lane] = 3; // Reset next crawler health
+        return next;
+      });
+      setHackerActive(prev => {
+        const next = [...prev];
+        next[lane] = true; // Let them walk out onto the grid
+        return next;
+      });
+    }, 1500);
+  };
+
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const shootingInterval = setInterval(() => {
+      if (stateRef.current.feedback) return;
+
+      const newBullets = [];
+      stateRef.current.peashooters.forEach((row, laneIdx) => {
+        row.forEach((hasPeashooter, colIdx) => {
+          if (hasPeashooter) {
+            newBullets.push({
+              id: `${laneIdx}-${colIdx}-${Date.now()}-${Math.random()}`,
+              lane: laneIdx,
+              currentX: colIdx + 1.22 // Align exactly with mouth of peashooter
+            });
+          }
+        });
+      });
+
+      if (newBullets.length > 0) {
+        setBullets(prev => [...prev, ...newBullets]);
+      }
+    }, 3500); // Slow deliberate shots
+
+    return () => clearInterval(shootingInterval);
+  }, [gameState, peashooters]);
+
+  const startGame = () => {
+    const shuffled = shuffleArray(questions).map(q => ({
+      ...q,
+      options: shuffleArray(q.options)
+    }));
+    setQuestionsList(shuffled);
+    setCurrentQIndex(0);
+    
+    setHackerPositions([
+      5.0 + Math.random() * 0.4,
+      5.3 + Math.random() * 0.4,
+      5.1 + Math.random() * 0.4,
+      5.5 + Math.random() * 0.4,
+      5.2 + Math.random() * 0.4
+    ]);
+    
+    setHackerHealth([3, 3, 3, 3, 3]);
+    setHackerTypes([0, 1, 2, 3, 4].map(() => Math.floor(Math.random() * HACKER_VARIATIONS.length)));
+    setHackerActive([true, true, true, true, true]);
+    setPeashooters([
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, false, false, false]
+    ]);
+    setMowerStatus(['ready', 'ready', 'ready', 'ready', 'ready']);
+    setMowerX([0.7, 0.7, 0.7, 0.7, 0.7]);
+    setBullets([]);
+    setExplosions([]);
+    setFeedback(null);
+    setPlacementPending(false);
+    setIsNearlyApproached(false);
+
+    setGameState('countdown');
+    setCountdownText('READY.');
+
+    setTimeout(() => {
+      setCountdownText('SET.');
+    }, 800);
+
+    setTimeout(() => {
+      setCountdownText('PLANT!');
+    }, 1600);
+
+    setTimeout(() => {
+      setGameState('playing');
+    }, 2400);
+  };
+
+  const triggerRedemption = () => {
+    if (gameState !== 'playing') return;
+    const randQ = { ...redemptionQuestions[Math.floor(Math.random() * redemptionQuestions.length)] };
+    randQ.options = shuffleArray(randQ.options);
+    setRedemptionQ(randQ);
+    setGameState('redemption');
+    setFeedback(null);
+  };
+
+  const handleAnswer = (selectedOption) => {
+    if (gameState !== 'playing' && gameState !== 'redemption') return;
+    if (feedback !== null) return;
+
+    const currentQuestion = gameState === 'playing' ? questionsList[currentQIndex] : redemptionQ;
+    const isCorrect = selectedOption === currentQuestion.a;
+
+    if (gameState === 'playing') {
+      if (isCorrect) {
+        setFeedback('correct');
+        setTimeout(() => {
+          setFeedback(null);
+          setPlacementPending(true);
+        }, 1200);
+      } else {
+        setFeedback('incorrect');
+        // Surge active cyberhackers forward on incorrect inputs as penalty
+        setHackerPositions(prev => {
+          return prev.map((pos, lane) => {
+            if (!stateRef.current.hackerActive[lane]) return pos;
+            return Math.max(0.05, pos - 0.7);
+          });
+        });
+
+        setTimeout(() => {
+          advanceGame();
+        }, 1200);
+      }
+    } else if (gameState === 'redemption') {
+      if (isCorrect) {
+        setFeedback('redemption_success');
+        setTimeout(() => {
+          setHackerPositions([
+            5.0 + Math.random() * 0.3,
+            5.3 + Math.random() * 0.3,
+            5.1 + Math.random() * 0.3,
+            5.5 + Math.random() * 0.3,
+            5.2 + Math.random() * 0.3
+          ]);
+          setHackerTypes([0, 1, 2, 3, 4].map(() => Math.floor(Math.random() * HACKER_VARIATIONS.length)));
+          setHackerHealth([3, 3, 3, 3, 3]);
+          setHackerActive([true, true, true, true, true]);
+          setMowerStatus(['ready', 'ready', 'ready', 'ready', 'ready']);
+          setMowerX([0.7, 0.7, 0.7, 0.7, 0.7]);
+          setGameState('playing');
+          advanceGame();
+        }, 1400);
+      } else {
+        setFeedback('redemption_fail');
+        setTimeout(() => {
+          setGameState('lost');
+        }, 1400);
+      }
+    }
+  };
+
+  const handleGridClick = (laneIdx, colIdx) => {
+    if (!placementPending) return;
+    if (peashooters[laneIdx][colIdx]) return;
+
+    setPeashooters(prev => {
+      const updated = prev.map((row, rIdx) => {
+        if (rIdx === laneIdx) {
+          const nextRow = [...row];
+          nextRow[colIdx] = true;
+          return nextRow;
+        }
+        return row;
+      });
+      return updated;
+    });
+
+    setPlacementPending(false);
+    advanceGame();
+  };
+
+  const advanceGame = () => {
+    setFeedback(null);
+    if (currentQIndex < questionsList.length - 1) {
+      setCurrentQIndex(currentQIndex + 1);
+    } else {
+      setGameState('won');
+    }
+  };
+
+  const currentQuestion = gameState === 'playing' ? questionsList[currentQIndex] : redemptionQ;
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-2 sm:p-4 font-sans selection:bg-cyan-500 selection:text-slate-950 text-slate-100">
+      
+      <style>{`
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes walk { 0%, 100% { transform: translate(-50%, -50%) rotate(0deg); } 50% { transform: translate(-50%, calc(-50% - 6px)) rotate(4deg); } }
+        .animate-walk { animation: walk 2s ease-in-out infinite; }
+        .redemption-flash { animation: flash 1s infinite; }
+        @keyframes flash { 0%, 100% { box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.2); } 50% { box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.6); } }
+        .animate-glitch-surge { animation: glitchSurge 0.6s ease-in-out infinite; }
+        @keyframes glitchSurge {
+          0%, 100% { filter: drop-shadow(0 0 0px #ef4444); }
+          50% { filter: drop-shadow(0 0 25px #ef4444) hue-rotate(90deg); transform: translate(-65%, -50%) scale(1.15); }
+        }
+        @keyframes pulseCountdown {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+        .animate-countdownText { animation: pulseCountdown 0.4s ease-in-out infinite; }
+      `}</style>
+
+      <div className="w-full max-w-5xl bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl sm:rounded-3xl shadow-[0_0_60px_rgba(14,165,233,0.15)] overflow-hidden relative">
+        
+        {/* Header section */}
+        <header className="bg-slate-950/80 border-b border-sky-900/50 text-sky-400 p-3 sm:p-4 flex justify-between items-center shadow-lg relative z-10">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Shield className="w-5 h-5 sm:w-7 sm:h-7 text-sky-400 animate-pulse" />
+            <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-wider uppercase bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">
+              Plants Vs. Cyberhackers
+            </h1>
+          </div>
+          {(gameState === 'playing' || gameState === 'countdown') && (
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-slate-400">Security Wave</span>
+              <div className="font-mono text-xs sm:text-base font-bold bg-slate-900/90 border border-sky-800 text-sky-300 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full shadow-[0_0_15px_rgba(14,165,233,0.4)]">
+                {currentQIndex + 1} / {questionsList.length}
+              </div>
+            </div>
+          )}
+        </header>
+
+        {/* --- LAWN MAP (5 Lanes) --- */}
+        <div className={`relative h-[250px] xs:h-[320px] sm:h-[380px] md:h-[460px] lg:h-[480px] bg-[#0c1426] overflow-hidden flex flex-col ${gameState === 'redemption' ? 'redemption-flash' : ''}`}>
+          
+          {/* Leftmost Website core zone */}
+          <div className="absolute left-0 top-0 bottom-0 w-[16.666%] bg-sky-950/20 border-r border-sky-500/20 shadow-[0_0_30px_rgba(14,165,233,0.1)] z-10 flex items-center justify-center backdrop-blur-sm">
+             <WebsiteCore />
+          </div>
+
+          {[0, 1, 2, 3, 4].map((lane) => (
+            <div key={lane} className="flex-1 relative border-b border-slate-900/60 bg-gradient-to-r from-slate-950/20 via-slate-900/10 to-slate-950/20 group">
+              
+              {/* Columns indicators */}
+              <div className="absolute inset-0 flex opacity-5 pointer-events-none">
+                {[...Array(6)].map((_, i) => <div key={i} className="flex-1 border-r border-white"></div>)}
+              </div>
+
+              {/* Grid Placement highlight markers */}
+              {placementPending && (
+                <div className="absolute inset-0 flex z-30 pointer-events-auto">
+                  <div className="w-[16.666%] pointer-events-none"></div>
+                  {[0, 1, 2, 3].map((colIdx) => (
+                    <button
+                      key={colIdx}
+                      onClick={() => handleGridClick(lane, colIdx)}
+                      disabled={peashooters[lane][colIdx]}
+                      className={`w-[16.666%] border-2 h-full transition-all flex items-center justify-center cursor-crosshair
+                        ${peashooters[lane][colIdx] 
+                          ? 'border-transparent cursor-not-allowed opacity-10' 
+                          : 'border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/25 shadow-[inset_0_0_15px_rgba(16,185,129,0.1)]'
+                        }`}
+                      title={peashooters[lane][colIdx] ? "Occupied" : "Plant Peashooter Here"}
+                    >
+                      {!peashooters[lane][colIdx] && (
+                        <span className="text-[10px] sm:text-xs font-bold text-emerald-400/80 animate-pulse hidden xs:inline">PLANT</span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="flex-1 pointer-events-none"></div>
+                </div>
+              )}
+
+              {/* Cyber Sweeper Lawn Mower Layer */}
+              {mowerStatus[lane] !== 'spent' && (
+                <div 
+                  className="absolute top-1/2 z-30"
+                  style={{
+                    left: `calc(${mowerStatus[lane] === 'active' ? mowerX[lane] : 0.75} * 100% / 6 + 8.333%)`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <LawnMower status={mowerStatus[lane]} />
+                </div>
+              )}
+
+              {/* Peashooter Layout */}
+              {[0, 1, 2, 3].map((colIdx) => (
+                peashooters[lane][colIdx] && (
+                  <div 
+                    key={colIdx} 
+                    className="absolute top-1/2 z-20"
+                    style={{ 
+                      left: `calc(${(colIdx + 1)} * 100% / 6 + 8.333%)`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    <Peashooter />
+                  </div>
+                )
+              ))}
+
+              {/* Fired Plasma bullets */}
+              {bullets.filter(b => b.lane === lane).map(b => (
+                <div 
+                  key={b.id}
+                  className="absolute top-[44%] -translate-y-1/2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full bg-emerald-400 shadow-[0_0_15px_#34d399,inset_0_0_5px_#fff] z-30"
+                  style={{
+                    left: `calc(${b.currentX} * 100% / 6 + 8.333%)`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                />
+              ))}
+
+              {/* Digital Explosion Effects */}
+              {explosions.filter(e => e.lane === lane).map(e => (
+                <div 
+                  key={e.id}
+                  className="absolute top-1/2"
+                  style={{
+                    left: `calc(${e.x} * 100% / 6 + 8.333%)`,
+                  }}
+                >
+                  <DigitalExplosion />
+                </div>
+              ))}
+
+              {/* Walking Cyberhackers with 3-Shot Health Bars */}
+              {gameState !== 'start' && gameState !== 'won' && hackerActive[lane] && (
+                <div 
+                  className={`absolute top-1/2 z-20 transition-all duration-75 ease-linear animate-walk ${feedback === 'incorrect' ? 'animate-glitch-surge' : ''}`}
+                  style={{ left: `calc(${hackerPositions[lane]} * 100% / 6 + 8.333%)` }}
+                >
+                  <div className="relative">
+                    {/* Glowing Power Health cells: 3 power dots */}
+                    <div className="absolute -top-5 sm:-top-7 left-1/2 -translate-x-1/2 flex space-x-0.5 sm:space-x-1 bg-slate-950/80 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full border border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.3)] z-30">
+                      {[1, 2, 3].map((dot) => (
+                        <div 
+                          key={dot}
+                          className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 ${
+                            dot <= hackerHealth[lane] 
+                              ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' 
+                              : 'bg-slate-800'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    
+                    <Cyberhacker variationIdx={hackerTypes[lane]} />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Near server warning alerts */}
+          {isNearlyApproached && gameState === 'playing' && (
+            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-30 bg-red-950/95 border border-red-500 text-red-200 px-4 py-1.5 sm:px-6 sm:py-2.5 rounded-full shadow-[0_0_30px_rgba(239,68,68,0.7)] flex items-center space-x-2 sm:space-x-3 animate-bounce">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 animate-pulse" />
+              <span className="font-black text-[9px] sm:text-xs md:text-sm tracking-widest uppercase text-center">FIREWALL WARNING: Hacker near Website Core!</span>
+            </div>
+          )}
+
+          {/* Placement pending guides */}
+          {placementPending && (
+            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-30 bg-emerald-950/95 border border-emerald-500 text-emerald-200 px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl shadow-[0_0_35px_rgba(16,185,129,0.75)] flex items-center space-x-2 sm:space-x-3 animate-bounce">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 animate-pulse" />
+              <span className="font-black text-[9px] sm:text-xs md:text-sm tracking-widest uppercase text-center">Correct! Select highlighted cell above to plant!</span>
+            </div>
+          )}
+
+          {/* READY. SET. PLANT. Transit Screen Overlay */}
+          {gameState === 'countdown' && (
+            <div className="absolute inset-0 flex items-center justify-center z-40 bg-slate-950/75 backdrop-blur-md">
+              <div className="text-center animate-countdownText">
+                <h2 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-widest uppercase bg-gradient-to-r from-emerald-400 via-sky-400 to-emerald-500 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(52,211,153,0.8)]">
+                  {countdownText}
+                </h2>
+              </div>
+            </div>
+          )}
+
+          {/* Interaction status banner */}
+          {feedback && (
+            <div className="absolute inset-0 flex items-center justify-center z-40 bg-slate-950/80 backdrop-blur-sm p-4">
+              <div className="text-center p-4 sm:p-6 rounded-2xl max-w-sm sm:max-w-md bg-slate-900 border border-slate-800 shadow-2xl">
+                <h2 className={`text-xl sm:text-3xl md:text-5xl font-black uppercase tracking-widest mb-2
+                  ${feedback === 'correct' || feedback === 'redemption_success' ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.8)]' : 'text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]'}`}>
+                  {feedback === 'correct' && "FIREWALL REINFORCED!"}
+                  {feedback === 'incorrect' && "EXPLOIT DEPLOYED!"}
+                  {feedback === 'redemption_success' && "SYSTEM RESTORED!"}
+                  {feedback === 'redemption_fail' && "RECOVERY TERMINATED!"}
+                </h2>
+                <p className="text-xs sm:text-base text-slate-400 mt-2">
+                  {feedback === 'correct' && "Verification complete. Set your tactical peashooter."}
+                  {feedback === 'incorrect' && "Wrong code structure! The cyberhackers surged closer!"}
+                  {feedback === 'redemption_success' && "Emergency patch successful! Hackers reset back to start."}
+                  {feedback === 'redemption_fail' && "Emergency system decryption failure."}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* --- CONTROLS / QUESTION PANEL AREA --- */}
+        <div className="p-4 sm:p-6 md:p-10 min-h-[260px] sm:min-h-[300px] flex flex-col justify-center bg-slate-950/40 relative border-t border-slate-900">
+          
+          {gameState === 'start' && (
+            <div className="text-center space-y-4 sm:space-y-6 max-w-2xl mx-auto py-2 sm:py-4 animate-fade-in">
+              <div className="flex justify-center space-x-3 text-emerald-400 text-3xl sm:text-5xl select-none">
+                <span>🛡️</span>
+                <span 
+                  onClick={() => setShowAnswersDatabase(true)}
+                  className="cursor-default"
+                >
+                  💻
+                </span>
+                <span>🪴</span>
+              </div>
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-wide">
+                Defend the Website!
+              </h2>
+              <p className="text-slate-400 text-xs sm:text-base md:text-lg leading-relaxed">
+                Cyberhackers are crawling down your network layers at any time and across all lanes. 
+                They move at a continuous steady pace. Every correct answer lets you manually select a cell to plant your Peashooter.
+              </p>
+              
+              {/* Dual Menu Buttons: Play & Instructions */}
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 pt-2 w-full">
+                <button 
+                  onClick={startGame}
+                  className="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 text-lg sm:text-2xl font-extrabold py-3 px-8 sm:py-4 sm:px-12 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:shadow-[0_0_40px_rgba(16,185,129,0.5)] transition-all transform hover:-translate-y-1 w-full sm:w-auto"
+                >
+                  <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+                  <span>PLAY</span>
+                </button>
+                <button 
+                  onClick={() => setShowInstructions(true)}
+                  className="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 text-lg sm:text-2xl font-extrabold py-3 px-8 sm:py-4 sm:px-12 rounded-2xl shadow-[0_0_20px_rgba(14,165,233,0.1)] hover:shadow-[0_0_30px_rgba(14,165,233,0.2)] transition-all transform hover:-translate-y-1 w-full sm:w-auto"
+                >
+                  <span>INSTRUCTIONS</span>
+                </button>
+              </div>
+
+              {/* Instructions Modal Overlay */}
+              {showInstructions && (
+                <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 rounded-2xl sm:rounded-3xl animate-fade-in">
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl p-5 sm:p-8 max-w-xl w-full relative shadow-[0_0_50px_rgba(14,165,233,0.25)] text-left">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-sky-400 tracking-wider uppercase mb-3 sm:mb-4 flex items-center gap-2">
+                      <Terminal className="w-6 h-6 sm:w-7 sm:h-7" />
+                      <span>Security Manual</span>
+                    </h3>
+                    <div className="space-y-3 sm:space-y-4 text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed overflow-y-auto max-h-[45vh] pr-1 sm:pr-2">
+                      <p>
+                        Administrator, your primary objective is to defend the <strong>Website Core</strong> from a relentless onslaught of automated Cyberhackers.
+                      </p>
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex gap-2 sm:gap-3">
+                          <span className="text-lg">🪴</span>
+                          <div>
+                            <strong className="text-emerald-400">Tactical Deploy:</strong> Every correct answer enables <em>Grid Placement Mode</em>. Select any empty cell in the 5x4 layout to place a Peashooter.
+                          </div>
+                        </div>
+                        <div className="flex gap-2 sm:gap-3">
+                          <span className="text-lg">🟢</span>
+                          <div>
+                            <strong className="text-emerald-400">Continuous Auto-Fire:</strong> Placed Peashooters automatically fire green plasma peas. Peas will damage the hackers without pushing them back, demanding steady defensive grids.
+                          </div>
+                        </div>
+                        <div className="flex gap-2 sm:gap-3">
+                          <span className="text-lg">💥</span>
+                          <div>
+                            <strong className="text-red-400">Hacker Elimination:</strong> Hackers have <strong>3 HP</strong>. Once hit 3 times, they explode and disappear, and a <em>different</em> hacker variant enters shortly after! Incorrect answers surge current hackers forward.
+                          </div>
+                        </div>
+                        <div className="flex gap-2 sm:gap-3">
+                          <span className="text-lg">🍽️</span>
+                          <div>
+                            <strong className="text-red-400">Eaten Defenses:</strong> If a hacker reaches a Peashooter, they will eat it and destroy that grid node. Keep your defenses deep!
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowInstructions(false)}
+                      className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl transition-all text-xs sm:text-base"
+                    >
+                      DISMISS PROTOCOL
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {};
+              {showAnswersDatabase && (
+                <div className="absolute inset-0 bg-slate-950/98 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 rounded-2xl sm:rounded-3xl animate-fade-in">
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl p-5 sm:p-8 max-w-xl w-full relative shadow-[0_0_50px_rgba(14,165,233,0.3)] text-left flex flex-col h-[85%]">
+                    <h3 className="text-xl sm:text-2xl font-black text-emerald-400 tracking-wider uppercase mb-3 sm:mb-4 flex items-center gap-2">
+                      <Shield className="w-6 h-6 text-emerald-400" />
+                      <span>Security Database Guide</span>
+                    </h3>
+                    <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1 sm:pr-2 text-slate-300 text-xs sm:text-sm">
+                      <p className="text-slate-400">
+                        Below are all standard verification structures expected by the firewall filters:
+                      </p>
+                      <div className="divide-y divide-slate-800 space-y-3">
+                        {questions.map((q, qidx) => (
+                          <div key={qidx} className="pt-3 first:pt-0">
+                            <span className="text-sky-400 font-bold block mb-1">Q{qidx + 1}: {q.q}</span>
+                            <span className="text-emerald-400 font-mono text-xs">Correct Tag: {q.a}</span>
+                          </div>
+                        ))}
+                        {redemptionQuestions.map((q, qidx) => (
+                          <div key={qidx + 10} className="pt-3">
+                            <span className="text-rose-400 font-bold block mb-1">Override Q: {q.q}</span>
+                            <span className="text-emerald-400 font-mono text-xs">Correct Tag: {q.a}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowAnswersDatabase(false)}
+                      className="mt-4 sm:mt-6 w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-2.5 sm:py-3 rounded-xl transition-all text-xs sm:text-base flex-shrink-0"
+                    >
+                      CLOSE DATABASE
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {gameState === 'countdown' && (
+            <div className="text-center py-6 sm:py-10 space-y-2 sm:space-y-4">
+              <div className="font-mono text-base sm:text-xl tracking-widest text-sky-400 animate-pulse uppercase">
+                SYSTEM BOOT SEQUENCE...
+              </div>
+              <div className="text-slate-400 text-xs sm:text-sm">
+                Calibrating defense grid arrays and scanning for hosts. Stand by.
+              </div>
+            </div>
+          )}
+
+          {(gameState === 'playing' || gameState === 'redemption') && !placementPending && currentQuestion && (
+            <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6">
+              
+              {gameState === 'redemption' && (
+                <div className="bg-red-500/10 border-l-4 border-red-500 p-3 sm:p-4 rounded-r-xl shadow-[0_0_20px_rgba(239,68,68,0.15)] flex items-start space-x-2 sm:space-x-3">
+                  <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-black text-sm sm:text-lg text-red-400 uppercase tracking-wider block mb-0.5 sm:mb-1">🚨 OVERRIDE SYSTEM ACTIVE 🚨</strong>
+                    <span className="text-xs sm:text-sm text-slate-300">Sweeper drones are depleted and hackers have bypassed defenses! Solve this emergency tag question to reset all active hostiles!</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-900/90 border border-slate-800 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-xl">
+                <div className="flex items-center space-x-2 text-[10px] sm:text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">
+                  <Terminal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>{gameState === 'redemption' ? 'System Restore Override' : `${currentQuestion.type} Console`}</span>
+                </div>
+                <h3 className="text-sm sm:text-xl md:text-2xl text-slate-100 font-semibold leading-relaxed">
+                  {currentQuestion.q}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {currentQuestion.options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnswer(opt)}
+                    disabled={feedback !== null}
+                    className="group relative bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-sky-500/60 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl text-sm sm:text-lg md:text-xl font-medium text-slate-200 transition-all text-left shadow-md disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-sky-500/0 via-sky-500/5 to-sky-500/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <span className="inline-block bg-slate-855 text-slate-400 font-mono text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg mr-2 sm:mr-3 group-hover:bg-sky-950 group-hover:text-sky-400 transition-colors shadow-inner">
+                      {String.fromCharCode(65 + idx)}
+                    </span>
+                    <code className="font-mono font-bold tracking-wide text-sky-300 group-hover:text-white transition-colors">{opt}</code>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {placementPending && (
+            <div className="text-center space-y-3 sm:space-y-4 max-w-xl mx-auto py-4 sm:py-6">
+              <div className="animate-pulse flex flex-col items-center">
+                <span className="text-4xl sm:text-6xl mb-1 sm:mb-2">🌿🛡️</span>
+                <h3 className="text-lg sm:text-2xl font-black text-emerald-400 tracking-wide uppercase">GRID PLACEMENT INTERFACE</h3>
+                <p className="text-slate-300 text-xs sm:text-base md:text-lg mt-1 sm:mt-2">
+                  Click on any empty, highlighted grid coordinates above to lock down and build your new Peashooter defense node.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {gameState === 'won' && (
+            <div className="text-center space-y-4 sm:space-y-6 py-4 sm:py-6 max-w-xl mx-auto">
+              <div className="flex justify-center space-x-2">
+                <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.5)] animate-bounce" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-400 tracking-wide">
+                Website Secured!
+              </h2>
+              <p className="text-slate-400 text-xs sm:text-lg leading-relaxed">
+                All security wave cycles completed. Your HTML source headers, stylesheets, formatting attributes, and pathways are safe from decrypting crawlers!
+              </p>
+              <button 
+                onClick={startGame}
+                className="inline-flex items-center space-x-2 sm:space-x-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-2.5 px-6 sm:py-3.5 sm:px-10 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all animate-pulse text-xs sm:text-base"
+              >
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>BOOST NEW CORE PROTOCOL</span>
+              </button>
+            </div>
+          )}
+
+          {gameState === 'lost' && (
+            <div className="text-center space-y-4 sm:space-y-6 py-4 sm:py-6 max-w-xl mx-auto">
+              <div className="flex justify-center">
+                <Skull className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-red-500 tracking-wide">
+                Website Breached!
+              </h2>
+              <p className="text-slate-400 text-xs sm:text-lg leading-relaxed">
+                A cyberhacker successfully decrypted your root server node. Re-evaluate your HTML code structure tags and try again!
+              </p>
+              <button 
+                onClick={startGame} 
+                className="inline-flex items-center space-x-2 sm:space-x-3 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-6 sm:py-3.5 sm:px-10 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all text-xs sm:text-base"
+              >
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>REINITIALIZE PARADIGM</span>
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}

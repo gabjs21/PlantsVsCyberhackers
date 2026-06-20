@@ -120,7 +120,7 @@
 
     <!-- --- CONTROLS / QUESTION PANEL AREA --- -->
     <div id="controls-panel" class="p-4 sm:p-6 md:p-10 min-h-[260px] sm:min-h-[300px] flex flex-col justify-center bg-slate-950/40 relative border-t border-slate-900">
-      <!-- Content Generated Dynamically by JS (Start page, Active Question page, Won, Lost, etc.) -->
+      <!-- Content Generated Dynamically by JS -->
     </div>
 
   </div>
@@ -137,7 +137,7 @@
         <span>Security Manual</span>
       </h3>
       <div class="space-y-3 sm:space-y-4 text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed overflow-y-auto max-h-[45vh] pr-1 sm:pr-2">
-        <p>Administrator, your primary objective is to defend the <strong>Website Core</strong> from a relentless onslaught of automated Cyberhackers.</p>
+        <p>Player, your primary objective is to defend the <strong>Website Core</strong> from a relentless onslaught of automated Cyberhackers.</p>
         <div class="space-y-2 sm:space-y-3">
           <div class="flex gap-2 sm:gap-3">
             <span class="text-lg">🪴</span>
@@ -333,6 +333,7 @@
     let redemptionQ = null;
 
     let placementPending = false;
+    let overlayRendered = false; // State tracker to prevent the continuous 50ms re-rendering of overlay buttons
 
     // Peashooter matrix (5 rows, 4 columns)
     let peashooters = [
@@ -360,7 +361,7 @@
     let gameInterval = null;
     let shootingInterval = null;
 
-    // Render Initial Grid Nodes
+    // Render Initial Grid Nodes - REORDERED SO PLACEMENT OVERLAY SITS ON TOP (LAST ELEMENT)
     const lanesContainer = document.getElementById('lanes-container');
     let lanesHTML = '';
     for (let lane = 0; lane < 5; lane++) {
@@ -376,14 +377,6 @@
             <div class="flex-1"></div>
           </div>
 
-          <!-- Placement Buttons Overlay (Rendered when planting) -->
-          <div id="placement-overlay-${lane}" class="absolute inset-0 flex z-30 hidden"></div>
-
-          <!-- Lawnmower Wrapper -->
-          <div id="mower-${lane}" class="absolute top-1/2 -translate-y-1/2 z-30" style="left: calc(0.75 * 100% / 6 + 8.333%)">
-            ${getLawnMowerSVG('ready')}
-          </div>
-
           <!-- Peashooters Layer -->
           <div id="peashooters-layer-${lane}"></div>
 
@@ -395,12 +388,20 @@
 
           <!-- Explosion Layer -->
           <div id="explosion-layer-${lane}"></div>
+
+          <!-- Lawnmower Wrapper -->
+          <div id="mower-${lane}" class="absolute top-1/2 -translate-y-1/2 z-30" style="left: calc(0.75 * 100% / 6 + 8.333%)">
+            ${getLawnMowerSVG('ready')}
+          </div>
+
+          <!-- Placement Buttons Overlay - elevated z-index to correctly intercept clicks -->
+          <div id="placement-overlay-${lane}" class="absolute inset-0 flex z-50 pointer-events-auto hidden"></div>
         </div>
       `;
     }
     lanesContainer.innerHTML = lanesHTML;
 
-    // Populate database answers view
+    // Populate answers validation catalog
     const dbQuestionsList = document.getElementById('database-questions-list');
     let dbHTML = '';
     questions.forEach((q, qidx) => {
@@ -425,14 +426,34 @@
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    // Modal Toggles
+    // Modal Helpers
     function toggleInstructions(show) {
-      setShowInstructions(show);
-    }
-    function setShowInstructions(show) {
       const modal = document.getElementById('instructions-modal');
       if (show) modal.classList.remove('hidden');
       else modal.classList.add('hidden');
+    }
+
+    // Clear loops and visually reset elements to jump back to start menu cleanly
+    function goToHome() {
+      gameState = 'start';
+      if (gameInterval) clearInterval(gameInterval);
+      if (shootingInterval) clearInterval(shootingInterval);
+
+      peashooters = [
+        [false, false, false, false],
+        [false, false, false, false],
+        [false, false, false, false],
+        [false, false, false, false],
+        [false, false, false, false]
+      ];
+      bullets = [];
+      explosions = [];
+      placementPending = false;
+      feedback = null;
+      isNearlyApproached = false;
+
+      renderControlPanel();
+      drawScene();
     }
 
     function toggleDatabase(show) {
@@ -441,7 +462,6 @@
       else modal.classList.add('hidden');
     }
 
-    // Main real-time game loop
     function startGameLoop() {
       if (gameInterval) clearInterval(gameInterval);
       if (shootingInterval) clearInterval(shootingInterval);
@@ -449,18 +469,18 @@
       gameInterval = setInterval(() => {
         if (gameState !== 'playing') return;
 
-        // 1. Walk Speed Calculations (0.0050 spacing)
+        // 1. Walk Speed Calculations (Lessen standard pace to exactly 0.0020 for better game flow)
         let closestHacker = 5.5;
         let requiresRedemption = false;
 
         for (let lane = 0; lane < 5; lane++) {
           if (!hackerActive[lane]) continue;
 
-          // Gentle random step-skips
+          // Standard steady crawl at paced speed rate of 0.0020
           if (Math.random() > 0.85 && hackerPositions[lane] < 5.0) {
-            // Keep marching at 0.0050 speed
+            // Keep walking
           } else {
-            hackerPositions[lane] = Math.max(0, hackerPositions[lane] - 0.0050);
+            hackerPositions[lane] = Math.max(0, hackerPositions[lane] - 0.0020);
           }
 
           const currentX = hackerPositions[lane];
@@ -477,7 +497,7 @@
           for (let colIdx = 0; colIdx < 4; colIdx++) {
             const peashooterPos = colIdx + 1;
             if (peashooters[lane][colIdx] && currentX <= peashooterPos + 0.3) {
-              peashooters[lane][colIdx] = false; // Ate the Peashooter
+              peashooters[lane][colIdx] = false; // Devoured peashooter
             }
           }
 
@@ -550,7 +570,7 @@
               bullets.push({
                 id: `${laneIdx}-${colIdx}-${Date.now()}-${Math.random()}`,
                 lane: laneIdx,
-                currentX: colIdx + 1.22 // Matches Peashooter mouth align
+                currentX: colIdx + 1.13 // Horizontally aligns starting coordinate exactly with Peashooter snout (ellipse cx="85")
               });
             }
           }
@@ -616,12 +636,12 @@
         }
         peaLayer.innerHTML = peaHTML;
 
-        // Draw Bullets
+        // Draw Bullets - top-[42%] vertically aligns precisely with Peashooter's mouth center snout
         const bulletLayer = document.getElementById(`bullets-layer-${lane}`);
         let bulHTML = '';
         bullets.filter(b => b.lane === lane).forEach(b => {
           bulHTML += `
-            <div class="absolute top-[44%] -translate-y-1/2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full bg-emerald-400 shadow-[0_0_15px_#34d399,inset_0_0_5px_#fff] z-30"
+            <div class="absolute top-[42%] -translate-y-1/2 w-2.5 h-2.5 sm:w-4 sm:h-4 rounded-full bg-emerald-400 shadow-[0_0_15px_#34d399,inset_0_0_5px_#fff] z-30"
               style="left: calc(${b.currentX} * 100% / 6 + 8.333%); transform: translate(-50%, -50%)"></div>
           `;
         });
@@ -639,9 +659,9 @@
 
           hackHTML += `
             <div class="absolute top-1/2 z-20 transition-all duration-75 ease-linear animate-walk ${feedback === 'incorrect' ? 'animate-glitch-surge' : ''}"
-              style="left: calc(${hackerPositions[lane]} * 100% / 6 + 8.333%)">
-              <div class="relative">
-                <div class="absolute -top-5 sm:-top-7 left-1/2 -translate-x-1/2 flex space-x-0.5 sm:space-x-1 bg-slate-950/80 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full border border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.3)] z-30">
+              style="left: calc(${hackerPositions[lane]} * 100% / 6 + 8.333%); transform: translate(-50%, -50%);">
+              <div class="relative flex flex-col items-center">
+                <div class="absolute -top-5 sm:-top-7 flex space-x-0.5 sm:space-x-1 bg-slate-950/80 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full border border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.3)] z-30 whitespace-nowrap">
                   ${hpDots}
                 </div>
                 ${getCyberhackerSVG(hackerTypes[lane])}
@@ -663,32 +683,45 @@
         });
         expLayer.innerHTML = expHTML;
 
-        // Grid selection controls overlay
+        // Grid selection controls overlay (Rendering locked once mounted to support seamless click interception)
         const overlay = document.getElementById(`placement-overlay-${lane}`);
         if (placementPending) {
           overlay.classList.remove('hidden');
-          let gridBtns = '<div class="w-[16.666%] pointer-events-none"></div>';
-          for (let colIdx = 0; colIdx < 4; colIdx++) {
-            const isOccupied = peashooters[lane][colIdx];
-            gridBtns += `
-              <button
-                onclick="handleGridClick(${lane}, ${colIdx})"
-                ${isOccupied ? 'disabled' : ''}
-                class="w-[16.666%] border border-emerald-500/20 h-full transition-all flex items-center justify-center cursor-crosshair
-                  ${isOccupied 
-                    ? 'border-transparent cursor-not-allowed opacity-10' 
-                    : 'border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/25 shadow-[inset_0_0_15px_rgba(16,185,129,0.1)]'
-                  }"
-              >
-                ${!isOccupied ? '<span class="text-[10px] sm:text-xs font-bold text-emerald-400/80 animate-pulse hidden xs:inline">PLANT</span>' : ''}
-              </button>
-            `;
+          if (!overlayRendered) {
+            let gridBtns = '<div class="w-[16.666%] pointer-events-none"></div>';
+            for (let colIdx = 0; colIdx < 4; colIdx++) {
+              const isOccupied = peashooters[lane][colIdx];
+              if (isOccupied) {
+                // If a Peashooter is already planted, remove the PLANT button overlay completely
+                gridBtns += `<div class="w-[16.666%] pointer-events-none"></div>`;
+              } else {
+                gridBtns += `
+                  <button
+                    onclick="handleGridClick(${lane}, ${colIdx})"
+                    class="w-[16.666%] h-full border border-emerald-500/25 bg-emerald-950/20 hover:bg-emerald-500/10 hover:border-emerald-400/60 transition-all flex items-center justify-center cursor-crosshair z-50 pointer-events-auto shadow-[inset_0_0_12px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] group/btn"
+                  >
+                    <!-- Sleek subtle plus icon that animates on hover instead of bulky text -->
+                    <svg class="w-4.5 h-4.5 text-emerald-400/40 group-hover/btn:text-emerald-400 group-hover/btn:scale-125 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                `;
+              }
+            }
+            gridBtns += '<div class="flex-1 pointer-events-none"></div>';
+            overlay.innerHTML = gridBtns;
           }
-          gridBtns += '<div class="flex-1 pointer-events-none"></div>';
-          overlay.innerHTML = gridBtns;
         } else {
           overlay.classList.add('hidden');
+          overlay.innerHTML = '';
         }
+      }
+
+      // Sync active state tracker flags
+      if (placementPending) {
+        overlayRendered = true;
+      } else {
+        overlayRendered = false;
       }
     }
 
@@ -716,6 +749,7 @@
           setTimeout(() => {
             clearFeedback();
             placementPending = true;
+            renderControlPanel(); // Redraw control panel to show instructions
             drawScene();
           }, 1200);
         } else {
@@ -780,6 +814,7 @@
     }
 
     function advanceGame() {
+      feedback = null;
       if (currentQIndex < questionsList.length - 1) {
         currentQIndex++;
         renderControlPanel();
@@ -787,15 +822,6 @@
       } else {
         endGame('won');
       }
-    }
-
-    function triggerRedemption() {
-      const randQ = { ...redemptionQuestions[Math.floor(Math.random() * redemptionQuestions.length)] };
-      randQ.options = shuffleArray(randQ.options);
-      redemptionQ = randQ;
-      gameState = 'redemption';
-      renderControlPanel();
-      drawScene();
     }
 
     // Scene transition controllers
@@ -857,6 +883,16 @@
       }, 2400);
     }
 
+    function triggerRedemption() {
+      const randQ = { ...redemptionQuestions[Math.floor(Math.random() * redemptionQuestions.length)] };
+      randQ.options = shuffleArray(randQ.options);
+      redemptionQ = randQ;
+      gameState = 'redemption';
+      renderControlPanel();
+      drawScene();
+    }
+
+    // End of match routers
     function endGame(outcome) {
       gameState = outcome;
       if (gameInterval) clearInterval(gameInterval);
@@ -886,7 +922,7 @@
           <div class="text-center space-y-4 sm:space-y-6 max-w-2xl mx-auto py-2 sm:py-4 animate-fade-in">
             <div class="flex justify-center space-x-3 text-emerald-400 text-3xl sm:text-5xl select-none">
               <span>🛡️</span>
-              <span onclick="toggleDatabase(true)" class="cursor-default">💻</span>
+              <span onclick="toggleDatabase(true)" class="cursor-default text-emerald-400 hover:scale-110 transition-transform">💻</span>
               <span>🪴</span>
             </div>
             <h2 class="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-wide">
@@ -974,7 +1010,7 @@
                   <span>${gameState === 'redemption' ? 'System Restore Override' : `${currentQ.type || 'Identification'} Console`}</span>
                 </div>
                 <h3 class="text-sm sm:text-xl md:text-2xl text-slate-100 font-semibold leading-relaxed">
-                  ${currentQ.q}
+                  {currentQ.q}
                 </h3>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -997,12 +1033,20 @@
             <p class="text-slate-400 text-xs sm:text-lg leading-relaxed">
               All security wave cycles completed. Your HTML source headers, stylesheets, formatting attributes, and pathways are safe from decrypting crawlers!
             </p>
-            <button onclick="startBootSequence()" class="inline-flex items-center space-x-2 sm:space-x-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-2.5 px-6 sm:py-3.5 sm:px-10 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all animate-pulse text-xs sm:text-base">
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
-              </svg>
-              <span>BOOST NEW CORE PROTOCOL</span>
-            </button>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 pt-2 w-full">
+              <button onclick="startBootSequence()" class="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-black py-3.5 px-8 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all animate-pulse text-xs sm:text-base w-full sm:w-auto">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
+                </svg>
+                <span>PLAY AGAIN</span>
+              </button>
+              <button onclick="goToHome()" class="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-black py-3.5 px-8 rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] transition-all text-xs sm:text-base w-full sm:w-auto">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>RETURN TO HOME</span>
+              </button>
+            </div>
           </div>
         `;
       } else if (gameState === 'lost') {
@@ -1019,12 +1063,20 @@
             <p class="text-slate-400 text-xs sm:text-lg leading-relaxed">
               A cyberhacker successfully decrypted your root server node. Re-evaluate your HTML code structure tags and try again!
             </p>
-            <button onclick="startBootSequence()" class="inline-flex items-center space-x-2 sm:space-x-3 bg-red-600 hover:bg-red-500 text-white font-black py-2.5 px-6 sm:py-3.5 sm:px-10 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all text-xs sm:text-base">
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
-              </svg>
-              <span>REINITIALIZE PARADIGM</span>
-            </button>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 pt-2 w-full">
+              <button onclick="startBootSequence()" class="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-8 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all text-xs sm:text-base w-full sm:w-auto">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
+                </svg>
+                <span>TRY AGAIN</span>
+              </button>
+              <button onclick="goToHome()" class="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-black py-3.5 px-8 rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] transition-all text-xs sm:text-base w-full sm:w-auto">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>RETURN TO HOME</span>
+              </button>
+            </div>
           </div>
         `;
       }

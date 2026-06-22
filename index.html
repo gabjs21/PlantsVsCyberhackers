@@ -194,15 +194,14 @@
 
   <!-- --- CORE GAME SCRIPT --- -->
   <script>
-    // Game Content Arrays
     const questions = [
       { type: 'Identification', q: "What tag serves as the absolute root element of any standard HTML document?", options: ["<html>", "<head>", "<body>", "<p>"], a: "<html>" },
       { type: 'Identification', q: "Which tag encloses all the visible, renderable content on a website?", options: ["<body>", "<html>", "<head>", "<nav>"], a: "<body>" },
-      { type: 'Identification', q: "What tag is placed inside the <head> to specify the text shown in the browser tab?", options: ["<title>", "<head>", "<h1>", "<nav>"], a: "<title>" },
+      { type: 'Identification', q: 'Which attribute inside an "&lt;img&gt; " tag points directly to the image file\'s source URL?', options: ["src", "href", "file", "style"], a: "src" },
+      { type: 'Identification', q: 'What tag is placed inside the "&lt;head&gt; " tag to specify the text shown in the browser tab?', options: ["<title>", "<head>", "<h1>", "<nav>"], a: "<title>" },
       { type: 'Scenario', q: "You want to create an active hyperlink to route your user to external documentation. What tag do you use?", options: ["<a>", "<link>", "<href>", "<nav>"], a: "<a>" },
-      { type: 'Identification', q: "What attribute determines the URL target destination inside an anchor tag (<a>)?", options: ["href", "src", "link", "style"], a: "href" },
+      { type: 'Identification', q: "What attribute determines the URL target destination inside an anchor tag (&lt;a&gt;)?", options: ["href", "src", "link", "style"], a: "href" },
       { type: 'Scenario', q: "You need to render a cybersecurity logo illustration on your website. Which tag is appropriate?", options: ["<img>", "<pic>", "<src>", "<image>"], a: "<img>" },
-      { type: 'Identification', q: "Which attribute inside an <img> tag points directly to the image file's source URL?", options: ["src", "href", "file", "style"], a: "src" },
       { type: 'Scenario', q: "You are designing the top menu layout of your website. Which container is designated for navigation links?", options: ["<nav>", "<a>", "<header>", "<body>"], a: "<nav>" },
       { type: 'Identification', q: "Which attribute applies inline CSS stylistic properties directly to an individual HTML element?", options: ["style", "css", "class", "design"], a: "style" },
       { type: 'Scenario', q: "You want to force a line break within a block of code description without starting a new paragraph. What tag do you use?", options: ["<br>", "<hr>", "<break>", "<p>"], a: "<br>" }
@@ -332,8 +331,11 @@
     let feedback = null; // 'correct', 'incorrect', 'redemption_success', 'redemption_fail'
     let redemptionQ = null;
 
+    // Tracking Audit Metrics
+    let playerAnswersSummary = []; // Array of { q: string, selected: string, correct: string, isCorrect: boolean }
+
     let placementPending = false;
-    let overlayRendered = false; // State tracker to prevent the continuous 50ms re-rendering of overlay buttons
+    let overlayRendered = false; 
 
     // Peashooter matrix (5 rows, 4 columns)
     let peashooters = [
@@ -433,7 +435,6 @@
       else modal.classList.add('hidden');
     }
 
-    // Clear loops and visually reset elements to jump back to start menu cleanly
     function goToHome() {
       gameState = 'start';
       if (gameInterval) clearInterval(gameInterval);
@@ -451,6 +452,7 @@
       placementPending = false;
       feedback = null;
       isNearlyApproached = false;
+      playerAnswersSummary = [];
 
       renderControlPanel();
       drawScene();
@@ -598,7 +600,6 @@
       }, 1500);
     }
 
-    // Drawing Scene Updates
     function drawScene() {
       // Near core warnings
       const warn = document.getElementById('warning-alert');
@@ -650,7 +651,7 @@
         // Draw active walking Hackers
         const hackLayer = document.getElementById(`hacker-layer-${lane}`);
         let hackHTML = '';
-        if (gameState !== 'start' && gameState !== 'won' && hackerActive[lane]) {
+        if (gameState !== 'start' && gameState !== 'won' && gameState !== 'lost' && hackerActive[lane]) {
           const hpDots = [1, 2, 3].map(dot => `
             <div class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 ${
               dot <= hackerHealth[lane] ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-slate-800'
@@ -735,7 +736,6 @@
       advanceGame();
     }
 
-    // Answers evaluations
     function handleAnswer(selectedOpt) {
       if (gameState !== 'playing' && gameState !== 'redemption') return;
       if (feedback !== null) return;
@@ -744,6 +744,14 @@
       const isCorrect = selectedOpt === currentQ.a;
 
       if (gameState === 'playing') {
+        // Track response for audit breakdown
+        playerAnswersSummary.push({
+          q: currentQ.q,
+          selected: selectedOpt,
+          correct: currentQ.a,
+          isCorrect: isCorrect
+        });
+
         if (isCorrect) {
           triggerFeedback('correct', 'FIREWALL REINFORCED!', 'Verification complete. Set your tactical peashooter.');
           setTimeout(() => {
@@ -824,7 +832,6 @@
       }
     }
 
-    // Scene transition controllers
     function startBootSequence() {
       // Shuffle wave lists
       questionsList = shuffleArray(questions).map(q => ({
@@ -835,6 +842,7 @@
       placementPending = false;
       feedback = null;
       isNearlyApproached = false;
+      playerAnswersSummary = []; // Clear summary report metrics
 
       // Clean Peashooter mapping nodes
       peashooters = [
@@ -901,7 +909,6 @@
       drawScene();
     }
 
-    // Dynamic UI Renderer for the bottom dashboard panel
     function renderControlPanel() {
       const panel = document.getElementById('controls-panel');
       const waveContainer = document.getElementById('wave-container');
@@ -922,7 +929,7 @@
           <div class="text-center space-y-4 sm:space-y-6 max-w-2xl mx-auto py-2 sm:py-4 animate-fade-in">
             <div class="flex justify-center space-x-3 text-emerald-400 text-3xl sm:text-5xl select-none">
               <span>🛡️</span>
-              <span onclick="toggleDatabase(true)" class="cursor-default text-emerald-400 hover:scale-110 transition-transform">💻</span>
+              <span onclick="toggleDatabase(true)" class="cursor-pointer text-emerald-400 hover:scale-110 transition-transform">💻</span>
               <span>🪴</span>
             </div>
             <h2 class="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-wide">
@@ -999,6 +1006,7 @@
             `;
           });
 
+          // Escape tags inside the rendered question to keep them safe from browser HTML parser
           panel.innerHTML = `
             <div class="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6">
               ${redemptionHeader}
@@ -1019,58 +1027,104 @@
             </div>
           `;
         }
-      } else if (gameState === 'won') {
-        panel.innerHTML = `
-          <div class="text-center space-y-4 sm:space-y-6 py-4 sm:py-6 max-w-xl mx-auto animate-fade-in">
-            <div class="flex justify-center space-x-2">
-              <svg class="w-12 h-12 sm:w-16 sm:h-16 text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.5)] animate-bounce" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6m0 2H9M9 6v2H5V5a1 1 0 011-1h12a1 1 0 011 1v1h-4V6m-4 2h3m-3 0V6" />
-              </svg>
+      } else if (gameState === 'won' || gameState === 'lost') {
+        const correctAnswersCount = playerAnswersSummary.filter(item => item.isCorrect).length;
+        const totalAsked = playerAnswersSummary.length;
+
+        // Custom outcomes based on point thresholds (>= 6 is Congratulations, <= 5 is Try Again)
+        const hasPassed = correctAnswersCount >= 6;
+
+        let endingTitle = '';
+        let endingSubtitle = '';
+        let badgeColorClass = '';
+
+        if (hasPassed) {
+          endingTitle = 'CONGRATULATIONS!';
+          endingSubtitle = 'Your HTML security defenses are certified! Cyberhackers have been completely repelled.';
+          badgeColorClass = 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40';
+        } else {
+          endingTitle = 'REPLAY RECOMMENDED';
+          endingSubtitle = 'The firewall was overwhelmed. Re-evaluate your HTML syntax rules and secure the gaps!';
+          badgeColorClass = 'bg-red-950/80 text-red-300 border-red-500/40';
+        }
+
+        // Build summary report list elements
+        let auditReportHTML = '';
+        if (totalAsked > 0) {
+          playerAnswersSummary.forEach((item, index) => {
+            auditReportHTML += `
+              <div class="p-3 bg-slate-950/60 rounded-xl border ${item.isCorrect ? 'border-emerald-500/10' : 'border-red-500/10'} text-left space-y-2">
+                <div class="flex items-start justify-between">
+                  <span class="text-slate-400 font-mono text-[10px] uppercase">Tag Verification Q${index + 1}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.isCorrect ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30' : 'bg-red-900/30 text-red-400 border border-red-500/30'}">
+                    ${item.isCorrect ? 'VERIFIED' : 'FAILED'}
+                  </span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-100 font-medium">${item.q}</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-xs">
+                  <div>
+                    <span class="text-slate-500">Your Selection:</span> 
+                    <code class="font-mono text-xs ${item.isCorrect ? 'text-emerald-400' : 'text-red-400'}">${escapeHTML(item.selected)}</code>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">Correct Tag:</span> 
+                    <code class="font-mono text-xs text-emerald-450">${escapeHTML(item.correct)}</code>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        } else {
+          auditReportHTML = `
+            <div class="text-center p-6 text-slate-500 text-xs">
+              No verification attempts logged in this run. Secure the perimeter earlier!
             </div>
-            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-400 tracking-wide">
-              Website Secured!
+          `;
+        }
+
+        panel.innerHTML = `
+          <div class="text-center space-y-4 sm:space-y-6 py-2 sm:py-4 max-w-2xl mx-auto animate-fade-in flex flex-col">
+            <div class="flex justify-center">
+              ${hasPassed ? `
+                <svg class="w-12 h-12 sm:w-16 sm:h-16 text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.5)] animate-bounce" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6m0 2H9M9 6v2H5V5a1 1 0 011-1h12a1 1 0 011 1v1h-4V6m-4 2h3m-3 0V6" />
+                </svg>
+              ` : `
+                <svg class="w-12 h-12 sm:w-16 sm:h-16 text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h.01M15 13h.01M12 21a9 9 0 009-9c0-2.08-.7-3.97-1.87-5.5a1.5 1.5 0 00-2.13-.13l-1.07.8C14.7 6.46 13.4 6 12 6s-2.7.46-3.93 1.17l-1.07-.8a1.5 1.5 0 00-2.13.13C3.7 8.03 3 9.92 3 12a9 9 0 009 9z" />
+                </svg>
+              `}
+            </div>
+            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black ${hasPassed ? 'text-emerald-400' : 'text-red-500'} tracking-wide uppercase">
+              ${endingTitle}
             </h2>
-            <p class="text-slate-400 text-xs sm:text-lg leading-relaxed">
-              All security wave cycles completed. Your HTML source headers, stylesheets, formatting attributes, and pathways are safe from decrypting crawlers!
+            
+            <div class="flex items-center justify-center pt-1">
+              <span class="inline-flex items-center justify-center font-mono text-xs sm:text-sm font-bold px-4 py-1.5 rounded-full border shadow-md ${badgeColorClass}">
+                Final Score: ${correctAnswersCount} / 10 Correct Answers
+              </span>
+            </div>
+
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed max-w-xl mx-auto">
+              ${endingSubtitle}
             </p>
+
+            <!-- Audit Report Scroll area -->
+            <div class="bg-slate-950/40 border border-slate-800/80 rounded-xl p-3 shadow-inner max-h-[160px] overflow-y-auto space-y-2 text-left">
+              <h4 class="text-[10px] font-bold text-sky-400 uppercase tracking-widest sticky top-0 bg-[#0c1426]/90 backdrop-blur-md pb-1.5 border-b border-slate-800/60 mb-2">
+                Security Verification Log
+              </h4>
+              ${auditReportHTML}
+            </div>
+
             <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 pt-2 w-full">
-              <button onclick="startBootSequence()" class="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-black py-3.5 px-8 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all animate-pulse text-xs sm:text-base w-full sm:w-auto">
+              <button onclick="startBootSequence()" class="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-400 hover:to-sky-400 text-slate-950 font-black py-2.5 px-6 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all text-xs sm:text-base w-full sm:w-auto">
                 <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
                 </svg>
-                <span>PLAY AGAIN</span>
+                <span>${hasPassed ? 'PLAY AGAIN' : 'REPLAY GAME'}</span>
               </button>
-              <button onclick="goToHome()" class="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-black py-3.5 px-8 rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] transition-all text-xs sm:text-base w-full sm:w-auto">
-                <svg class="w-4 h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                <span>RETURN TO HOME</span>
-              </button>
-            </div>
-          </div>
-        `;
-      } else if (gameState === 'lost') {
-        panel.innerHTML = `
-          <div class="text-center space-y-4 sm:space-y-6 py-4 sm:py-6 max-w-xl mx-auto animate-fade-in">
-            <div class="flex justify-center">
-              <svg class="w-12 h-12 sm:w-16 sm:h-16 text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h.01M15 13h.01M12 21a9 9 0 009-9c0-2.08-.7-3.97-1.87-5.5a1.5 1.5 0 00-2.13-.13l-1.07.8C14.7 6.46 13.4 6 12 6s-2.7.46-3.93 1.17l-1.07-.8a1.5 1.5 0 00-2.13.13C3.7 8.03 3 9.92 3 12a9 9 0 009 9z" />
-              </svg>
-            </div>
-            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-red-500 tracking-wide">
-              Website Breached!
-            </h2>
-            <p class="text-slate-400 text-xs sm:text-lg leading-relaxed">
-              A cyberhacker successfully decrypted your root server node. Re-evaluate your HTML code structure tags and try again!
-            </p>
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 pt-2 w-full">
-              <button onclick="startBootSequence()" class="inline-flex items-center justify-center space-x-2 sm:space-x-3 bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-8 rounded-xl shadow-lg hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all text-xs sm:text-base w-full sm:w-auto">
-                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 20v-5h-.581m0 0a8.003 8.003 0 11-15.357-2" />
-                </svg>
-                <span>TRY AGAIN</span>
-              </button>
-              <button onclick="goToHome()" class="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-black py-3.5 px-8 rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] transition-all text-xs sm:text-base w-full sm:w-auto">
+              <button onclick="goToHome()" class="inline-flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-black py-2.5 px-6 rounded-xl shadow-md hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] transition-all text-xs sm:text-base w-full sm:w-auto">
                 <svg class="w-4 h-4 sm:w-5 sm:h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
